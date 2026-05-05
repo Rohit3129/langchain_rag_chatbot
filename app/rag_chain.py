@@ -6,9 +6,25 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
+from langchain_community.memory import ConversationBufferWindowMemory
 from dotenv import load_dotenv
 
 load_dotenv()
+
+def build_chain_with_memory(pdf_path: str):
+    loader = PyPDFLoader(pdf_path)
+    docs = loader.load()
+    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    chunks = splitter.split_documents(docs)
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    vectorstore = Chroma.from_documents(chunks, embeddings)
+
+    memory = ConversationBufferWindowMemory(
+        k=3,  # remember last 3 exchanges
+        return_messages=True,
+        memory_key="chat_history"
+    )
+    return vectorstore, memory
 
 def build_rag_chain(pdf_path: str):
     loader = PyPDFLoader(pdf_path)
